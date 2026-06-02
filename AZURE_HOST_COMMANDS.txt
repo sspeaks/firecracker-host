@@ -1,0 +1,45 @@
+# Azure host commands
+
+# Work from the repo root.
+cd /Users/sspeaks/Projects/firecracker
+
+# First-time destructive install with nixos-anywhere.
+# This wipes /dev/sda on the Azure VM and installs .#azure-hypervisor.
+nix run github:nix-community/nixos-anywhere -- \
+  --flake .#azure-hypervisor \
+  --target-host root@52.173.105.249 \
+  -i ~/.ssh/nixos \
+  --ssh-option IdentitiesOnly=yes \
+  --ssh-option PreferredAuthentications=publickey \
+  --build-on remote \
+  --phases disko,install,reboot \
+  --debug
+
+# After the first install succeeds, use nixos-rebuild for normal config changes.
+# Dry-run the Azure host build.
+nix build --dry-run --no-link \
+  .#nixosConfigurations.azure-hypervisor.config.system.build.toplevel
+
+# Deploy a config change from macOS using nixos-rebuild from nixpkgs.
+nix run nixpkgs#nixos-rebuild -- switch \
+  --flake .#azure-hypervisor \
+  --target-host root@52.173.105.249 \
+  --build-host root@52.173.105.249 \
+  --fast \
+  -i ~/.ssh/nixos
+
+# Same deploy command if nixos-rebuild is already installed locally.
+nixos-rebuild switch \
+  --flake .#azure-hypervisor \
+  --target-host root@52.173.105.249 \
+  --build-host root@52.173.105.249 \
+  --fast \
+  -i ~/.ssh/nixos
+
+# Basic post-deploy checks.
+ssh -i ~/.ssh/nixos root@52.173.105.249 \
+  'systemctl is-system-running; systemctl --failed --no-pager; hostnamectl; systemctl status waagent --no-pager; ip link show vmbr0; systemctl list-units "microvm@*" --no-pager'
+
+# If systemd reports degraded, show failed unit logs.
+ssh -i ~/.ssh/nixos root@52.173.105.249 \
+  'for unit in $(systemctl --failed --no-legend --plain | awk "{print \$1}"); do systemctl status "$unit" --no-pager -l; journalctl -b -u "$unit" --no-pager -n 80; done'

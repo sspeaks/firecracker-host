@@ -1,0 +1,41 @@
+keys:
+  - &admin age1replace-with-admin-public-age-key
+  - &host age1replace-with-hypervisor-public-age-key
+  - &azure-host age1replace-with-azure-hypervisor-public-age-key
+  - &web01 age1replace-with-web01-public-age-key
+  - &db01 age1replace-with-db01-public-age-key
+  - &mon01 age1replace-with-mon01-public-age-key
+
+creation_rules:
+  - path_regex: secrets/host\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host
+
+  - path_regex: secrets/azure-host\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *azure-host
+
+  - path_regex: vms/web-01/secrets\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host
+          - *web01
+
+  - path_regex: vms/db-01/secrets\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host
+          - *db01
+
+  - path_regex: vms/mon-01/secrets\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host
+          - *mon01

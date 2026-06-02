@@ -3,9 +3,6 @@
   lib,
   ...
 }:
-let
-  sshOnlyPasswordHash = "$6$rbXDnu0uv..PIqm8$kv.cDav9lRe4ndikqITi.ilpNwZgasmvTSXYqfIKdwaP7o1805pM.uwfEkLJZHLlTC1vdtW/WEzXJKbB0/NPh1";
-in
 {
   firecracker.hostImpermanence = {
     enable = true;
@@ -38,7 +35,7 @@ in
 
   users.users = {
     root = {
-      hashedPassword = sshOnlyPasswordHash;
+      hashedPassword = "!";
       openssh.authorizedKeys.keys = [
         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC0XL/A/LJGYwiVh/WZaE8cmSBvPJU878PDTRaPV4ixuz5mT9E2Y+hlrP9eQm4SvznjD8TqaSwAgNlE1BfOFlBZ5UjRlOdDfSSSM9MjxLda+TTwFntRum+3irjFLwAzP1O4HCtavxdvJPpZWdVuR6Ku8WH+9Ls30Kp0SzouGkHVSD2udEQm6yFWfSYfMNEfFzg04SRovLkz3NQpEo8evgbxiNYT7pa0m4RMd7VohJn8H/P7Fl7xeEEJdLNKLPEnyxTK0ZH+hPnoNtPqLp+oz8xqefGtvl8ff9cPvXnz2jIS3b6PR+MGEV6eQIOtKuEDCIx3b0kdoSWY9OeglB9eoAl7mUKKZGpH6pKgCLf7QZUL3QSh3jUxp/jZD2TxdKXd0ejBz4DC9CNIvuu95sDnWmwnch+lJU4ObtXW44Xlfal+SYDSD88GYqwFwPhPakFTRhlncoOh2FL7TUcaiopUhYRl8bg+H1yfC0oiciUrT9HC4Jxp0xR/KLwfymFccWObr1c= sspeaks@Seths-MacBook-Pro.local"
       ];
@@ -46,7 +43,7 @@ in
 
     sspeaks = {
       isNormalUser = true;
-      hashedPassword = sshOnlyPasswordHash;
+      hashedPassword = "!";
       extraGroups = [ "wheel" ];
       openssh.authorizedKeys.keys = config.users.users.root.openssh.authorizedKeys.keys;
     };

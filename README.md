@@ -168,17 +168,34 @@ journalctl -u microvm@web-01.service -f
 
 ## Running the hypervisor as a VM
 
-The flake includes a NixOS VM variant for the `hypervisor` host. It boots the host under QEMU and replaces the production flake-referenced guests with lightweight inline Firecracker smoke guests named from `lib/inventory.nix`.
+The flake includes local NixOS VM variants for the `hypervisor` host. They boot the host under QEMU and replace the production flake-referenced guests with inline Firecracker guests named from `lib/inventory.nix`.
 
 This is meant for Linux development machines with KVM and nested virtualization enabled. It is not expected to run directly on macOS because Firecracker requires `/dev/kvm`.
 
-Start it with:
+Start the smoke VM with:
 
 ```bash
 nix run .#run-hypervisor-vm
 ```
 
-Build the VM runner without starting it:
+The smoke VM is the fastest nested-virtualization check. It starts lightweight guests with SSH only, so it proves QEMU, nested KVM, Firecracker, TAP networking, and guest boot without requiring production services or secrets.
+
+Start the integration VM with:
+
+```bash
+nix run .#run-hypervisor-integration-vm
+```
+
+The integration VM imports the real per-VM service modules with local-safe secret overrides and smaller guest resources. Use it to verify that internal services bind their expected ports before deploying the host:
+
+```text
+web-01    10.0.0.11:80
+db-01     10.0.0.21:5432
+redis-01  10.0.0.41:6379
+mon-01    10.0.0.31:9100
+```
+
+Build a VM runner without starting it:
 
 ```bash
 ./scripts/run-hypervisor-vm.sh --build-only
@@ -191,10 +208,16 @@ The script checks:
 - current user can read and write `/dev/kvm`
 - nested KVM appears enabled on x86_64, or reports the aarch64 nested-KVM requirements
 
-The outer VM uses a persistent disk at:
+The smoke outer VM uses a persistent disk at:
 
 ```text
 .local/state/hypervisor-vm.qcow2
+```
+
+The integration outer VM uses:
+
+```text
+.local/state/hypervisor-integration-vm.qcow2
 ```
 
 Override it if needed:
@@ -223,7 +246,7 @@ systemctl status microvm@mon-01.service
 journalctl -u microvm@web-01.service -f
 ```
 
-The nested VM variant intentionally uses lightweight smoke guest configs instead of the production guest configs. That avoids requiring real encrypted secrets or VM age-key bootstrap just to test that the host can start Firecracker guests.
+The smoke VM variant intentionally uses lightweight guest configs instead of the production guest configs. That avoids requiring real encrypted secrets or VM age-key bootstrap just to test that the host can start Firecracker guests. Use `.#run-hypervisor-integration-vm` when you want the local VM to bind the real service ports.
 
 If Firecracker guests fail inside the outer VM, check nested virtualization:
 

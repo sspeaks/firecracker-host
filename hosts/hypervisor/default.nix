@@ -8,7 +8,6 @@
     ./hardware-configuration.nix
     ./microvms.nix
     ./networking.nix
-    ./vm-variant.nix
   ];
 
   networking.hostName = "hypervisor";

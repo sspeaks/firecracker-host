@@ -52,7 +52,7 @@
       inventory = import ./lib/inventory.nix;
 
       mkHypervisor =
-        system:
+        system: vmVariantModule:
         lib.nixosSystem {
           inherit system;
           specialArgs = {
@@ -69,6 +69,7 @@
             impermanence.nixosModules.impermanence
             ./modules/host/impermanence.nix
             ./hosts/hypervisor
+            vmVariantModule
             { nixpkgs.hostPlatform = lib.mkForce system; }
           ];
         };
@@ -132,12 +133,14 @@
       };
 
       nixosConfigurations = {
-        hypervisor = mkHypervisor "x86_64-linux";
+        hypervisor = mkHypervisor "x86_64-linux" ./hosts/hypervisor/vm-variant.nix;
+        hypervisor-integration = mkHypervisor "x86_64-linux" ./hosts/hypervisor/integration-vm-variant.nix;
         azure-hypervisor = mkAzureHypervisor "x86_64-linux";
       }
       // lib.mapAttrs (mkVmSystem "x86_64-linux") inventory.vms
       // {
-        hypervisor-aarch64 = mkHypervisor "aarch64-linux";
+        hypervisor-aarch64 = mkHypervisor "aarch64-linux" ./hosts/hypervisor/vm-variant.nix;
+        hypervisor-integration-aarch64 = mkHypervisor "aarch64-linux" ./hosts/hypervisor/integration-vm-variant.nix;
       }
       // lib.mapAttrs' (
         name: vm: lib.nameValuePair "${name}-aarch64" (mkVmSystem "aarch64-linux" name vm)
@@ -168,26 +171,33 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           hypervisorAttr = if system == "x86_64-linux" then "hypervisor" else "hypervisor-aarch64";
-        in
-        {
-          run-hypervisor-vm = {
+          integrationHypervisorAttr =
+            if system == "x86_64-linux" then "hypervisor-integration" else "hypervisor-integration-aarch64";
+          runHypervisorApp = name: hypervisorConfig: defaultDiskImage: {
             type = "app";
             program = "${
               pkgs.writeShellApplication {
-                name = "run-hypervisor-vm";
+                inherit name;
                 runtimeInputs = [
                   pkgs.coreutils
                   pkgs.gnugrep
                   pkgs.nix
                 ];
                 text = ''
-                  REPO_ROOT="''${REPO_ROOT:-$PWD}"
-                  export HYPERVISOR_NIX_ATTR=".#nixosConfigurations.${hypervisorAttr}.config.system.build.vm"
+                  export REPO_ROOT="''${REPO_ROOT:-$PWD}"
+                  export HYPERVISOR_NIX_ATTR=".#nixosConfigurations.${hypervisorConfig}.config.system.build.vm"
+                  export NIX_DISK_IMAGE="''${NIX_DISK_IMAGE:-$REPO_ROOT/.local/state/${defaultDiskImage}}"
                   exec ${./scripts/run-hypervisor-vm.sh} "$@"
                 '';
               }
-            }/bin/run-hypervisor-vm";
+            }/bin/${name}";
           };
+        in
+        {
+          run-hypervisor-vm = runHypervisorApp "run-hypervisor-vm" hypervisorAttr "hypervisor-vm.qcow2";
+          run-hypervisor-integration-vm =
+            runHypervisorApp "run-hypervisor-integration-vm" integrationHypervisorAttr
+              "hypervisor-integration-vm.qcow2";
         }
       );
     };
